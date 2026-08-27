@@ -1,12 +1,12 @@
 import { ArrowDownToLine, ExternalLink, RotateCcw, Trash2, X } from "lucide-react";
-import type { DocumentJob } from "../types";
+import type { DocumentJob, ExtractorMode } from "../types";
 
 type Props = {
   job: DocumentJob;
   compact?: boolean;
   onCancel: (id: string) => void;
   onRemove: (id: string) => void;
-  onRetry?: (url: string) => void;
+  onRetry?: (url: string, extractor: ExtractorMode) => void;
 };
 
 export function JobActions({ job, compact, onCancel, onRemove, onRetry }: Props) {
@@ -29,7 +29,7 @@ export function JobActions({ job, compact, onCancel, onRemove, onRetry }: Props)
         </a>
       )}
       {!active && onRetry && (
-        <button type="button" className="job-action" onClick={() => onRetry(job.url)}>
+        <button type="button" className="job-action" onClick={() => onRetry(job.url, job.extractor)}>
           <RotateCcw size={14} /> Relancer
         </button>
       )}

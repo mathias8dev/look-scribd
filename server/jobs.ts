@@ -14,7 +14,8 @@ import {
   saveJob,
 } from "./db.js";
 import { downloadWithPlaywright } from "./browser.js";
-import type { DocumentJob, ParsedDocument } from "./types.js";
+import { downloadFastScribd } from "./fast-extractor.js";
+import type { DocumentJob, ExtractorMode, ParsedDocument } from "./types.js";
 
 const downloadRoot = process.env.LOOK_SCRIBD_DOWNLOAD_DIR || path.join(process.cwd(), "downloads");
 const maxConcurrent = Math.max(1, Number(process.env.LOOK_SCRIBD_MAX_CONCURRENT || 2));
@@ -39,6 +40,12 @@ function safeFilename(value: string): string {
   const clean = decoded.normalize("NFKC")
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
   return clean || `document-${Date.now()}.pdf`;
+}
+
+export function parseExtractorMode(input: unknown): ExtractorMode {
+  if (input === undefined || input === null || input === "") return "auto";
+  if (input === "auto" || input === "fast" || input === "browser") return input;
+  throw new Error("L’extracteur demandé n’est pas reconnu.");
 }
 
 export function parseDocumentUrl(input: unknown): ParsedDocument {
@@ -202,19 +209,46 @@ async function processDirectJob(job: DocumentJob, signal: AbortSignal): Promise<
 async function processScribdJob(job: DocumentJob, signal: AbortSignal): Promise<void> {
   await setJob(job, 12, "Validation du lien", "Lien Scribd reconnu.");
   const outputDirectory = path.join(downloadRoot, job.id);
+  const runFastExtractor = () => downloadFastScribd({
+    url: job.url,
+    outputDirectory,
+    outputFilename: job.title,
+    maxFileBytes,
+    signal,
+    onProgress: (progress, step, log) => setJob(job, progress, step, log),
+  });
+  const runBrowserExtractor = () => downloadWithPlaywright({
+    url: job.url,
+    outputDirectory,
+    maxFileBytes,
+    signal,
+    onProgress: (progress, step, log) => setJob(job, progress, step, log),
+  });
+
   try {
-    const result = await downloadWithPlaywright({
-      url: job.url,
-      outputDirectory,
-      maxFileBytes,
-      signal,
-      onProgress: (progress, step, log) => setJob(job, progress, step, log),
-    });
+    let result;
+    if (job.extractor === "fast") {
+      result = await runFastExtractor();
+    } else if (job.extractor === "browser") {
+      result = await runBrowserExtractor();
+    } else {
+      try {
+        result = await runFastExtractor();
+      } catch (error) {
+        if (signal.aborted || (error instanceof DOMException && error.name === "AbortError")) throw error;
+        await fs.rm(outputDirectory, { recursive: true, force: true });
+        job.progress = 12;
+        const reason = error instanceof Error ? error.message : String(error);
+        await setJob(job, 14, "Repli navigateur", `Extraction rapide indisponible (${reason}). Repli vers Playwright.`);
+        result = await runBrowserExtractor();
+      }
+    }
     job.fileName = result.fileName;
     job.fileSize = result.fileSize;
     job.format = result.format;
     job.actionUrl = undefined;
-    await setJob(job, 98, "Finalisation", `Fichier ${result.fileName} prêt.`);
+    const extractorLabel = job.extractor === "browser" ? "navigateur" : job.extractor === "fast" ? "rapide" : "automatique";
+    await setJob(job, 98, "Finalisation", `Fichier ${result.fileName} prêt (mode ${extractorLabel}).`);
   } catch (error) {
     await fs.rm(outputDirectory, { recursive: true, force: true });
     throw error;
@@ -277,18 +311,20 @@ export async function initializeJobs(): Promise<void> {
   await pumpQueue();
 }
 
-export async function createJob(input: unknown): Promise<DocumentJob> {
+export async function createJob(input: unknown, extractorInput?: unknown): Promise<DocumentJob> {
   const parsed = parseDocumentUrl(input);
+  const extractor = parseExtractorMode(extractorInput);
   const timestamp = now();
   const job: DocumentJob = {
     id: randomUUID(),
     ...parsed,
+    extractor,
     status: "queued",
     progress: 0,
     currentStep: "En attente",
     createdAt: timestamp,
     updatedAt: timestamp,
-    logs: [`${new Date().toLocaleTimeString("fr-FR")} · Job ajouté à la file.`],
+    logs: [`${new Date().toLocaleTimeString("fr-FR")} · Job ajouté à la file (extracteur : ${extractor}).`],
   };
   await insertJob(job);
   queue.push(job.id);

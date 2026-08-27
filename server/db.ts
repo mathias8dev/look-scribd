@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import sqlite3 from "sqlite3";
-import type { DocumentJob, JobStatus } from "./types.js";
+import type { DocumentJob, ExtractorMode, JobStatus } from "./types.js";
 
 const dataRoot = process.env.LOOK_SCRIBD_DATA_DIR || path.join(process.cwd(), "data");
 const databasePath = path.join(dataRoot, "jobs.sqlite");
@@ -10,6 +10,7 @@ type JobRow = {
   id: string;
   url: string;
   kind: DocumentJob["kind"];
+  extractor: string | null;
   source: string;
   title: string;
   format: string;
@@ -57,6 +58,7 @@ async function openDatabase(): Promise<sqlite3.Database> {
     id TEXT PRIMARY KEY,
     url TEXT NOT NULL,
     kind TEXT NOT NULL,
+    extractor TEXT NOT NULL DEFAULT 'auto',
     source TEXT NOT NULL,
     title TEXT NOT NULL,
     format TEXT NOT NULL,
@@ -71,6 +73,10 @@ async function openDatabase(): Promise<sqlite3.Database> {
     action_url TEXT,
     error TEXT
   )`);
+  const columns = await all<{ name: string }>(db, "PRAGMA table_info(jobs)");
+  if (!columns.some(({ name }) => name === "extractor")) {
+    await run(db, "ALTER TABLE jobs ADD COLUMN extractor TEXT NOT NULL DEFAULT 'auto'");
+  }
   await run(db, "CREATE INDEX IF NOT EXISTS jobs_created_at_idx ON jobs(created_at DESC)");
   await run(db, `UPDATE jobs SET status = 'failed', progress = 0,
     current_step = 'Relance Playwright requise',
@@ -92,10 +98,15 @@ function toJob(row: JobRow): DocumentJob {
     if (Array.isArray(parsed)) logs = parsed.filter((item): item is string => typeof item === "string");
   } catch {}
 
+  const extractor: ExtractorMode = ["auto", "fast", "browser"].includes(row.extractor || "")
+    ? row.extractor as ExtractorMode
+    : "auto";
+
   return {
     id: row.id,
     url: row.url,
     kind: row.kind,
+    extractor,
     source: row.source,
     title: row.title,
     format: row.format,
@@ -115,10 +126,10 @@ function toJob(row: JobRow): DocumentJob {
 export async function insertJob(job: DocumentJob): Promise<void> {
   const db = await getDatabase();
   await run(db, `INSERT INTO jobs (
-    id, url, kind, source, title, format, status, progress, current_step,
+    id, url, kind, extractor, source, title, format, status, progress, current_step,
     created_at, updated_at, logs_json, file_name, file_size, action_url, error
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-    job.id, job.url, job.kind, job.source, job.title, job.format, job.status,
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+    job.id, job.url, job.kind, job.extractor, job.source, job.title, job.format, job.status,
     job.progress, job.currentStep, job.createdAt, job.updatedAt,
     JSON.stringify(job.logs), job.fileName ?? null, job.fileSize ?? null,
     job.actionUrl ?? null, job.error ?? null,
@@ -129,12 +140,12 @@ export async function saveJob(job: DocumentJob): Promise<void> {
   const db = await getDatabase();
   await run(db, `UPDATE jobs SET
     status = ?, progress = ?, current_step = ?, updated_at = ?, logs_json = ?,
-    file_name = ?, file_size = ?, action_url = ?, error = ?, title = ?, format = ?
+    file_name = ?, file_size = ?, action_url = ?, error = ?, title = ?, format = ?, extractor = ?
     WHERE id = ?`, [
     job.status, job.progress, job.currentStep, job.updatedAt,
     JSON.stringify(job.logs.slice(-200)), job.fileName ?? null,
     job.fileSize ?? null, job.actionUrl ?? null, job.error ?? null,
-    job.title, job.format, job.id,
+    job.title, job.format, job.extractor, job.id,
   ]);
 }
 

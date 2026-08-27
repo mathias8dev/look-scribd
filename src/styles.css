@@ -77,6 +77,15 @@ main { min-height: 100vh; overflow: hidden; }
 .primary-button { display: inline-flex; min-width: 146px; min-height: 47px; align-items: center; justify-content: center; gap: 8px; margin: 6px; padding: 10px 14px; border: 0; border-radius: 12px; color: white; background: var(--ink); box-shadow: 0 8px 20px rgba(24,49,43,.13); font-size: .77rem; font-weight: 750; transition: .2s; }
 .primary-button:hover:not(:disabled) { background: #23463c; box-shadow: 0 10px 26px rgba(24,49,43,.2); transform: translateY(-1px); }
 .primary-button:disabled { opacity: .5; }
+.extractor-picker { display: flex; min-width: 0; align-items: center; gap: 11px; margin: 11px 2px 0; padding: 0; border: 0; }
+.extractor-picker legend { float: left; padding: 0; color: var(--muted); font-size: .65rem; font-weight: 780; letter-spacing: .05em; text-transform: uppercase; }
+.extractor-picker > div { display: grid; min-width: 0; flex: 1; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.extractor-picker button { display: grid; min-width: 0; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: rgba(255,255,255,.72); text-align: left; transition: .18s; }
+.extractor-picker button:hover:not(:disabled) { border-color: #bdc8bf; background: white; }
+.extractor-picker button.active { border-color: var(--sage); color: var(--ink); background: var(--soft); box-shadow: inset 0 0 0 1px rgba(96,125,112,.08); }
+.extractor-picker strong { overflow: hidden; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.extractor-picker span { overflow: hidden; color: var(--muted); font-size: .56rem; text-overflow: ellipsis; white-space: nowrap; }
+.extractor-picker:disabled { opacity: .6; }
 .form-error { margin: 10px 3px 0; color: var(--danger); font-size: .74rem; line-height: 1.5; }
 .spin { animation: spin .9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -213,6 +222,8 @@ footer > button { display: flex; align-items: center; gap: 6px; padding: 0; bord
   .navbar { width: calc(100% - 32px); }
   .activity-button span { display: none; }
   .activity-button { padding-left: 11px; }
+  .extractor-picker { align-items: flex-start; flex-direction: column; }
+  .extractor-picker > div { width: 100%; }
   .hero-section { padding: 54px 15px 75px; }
   .hero-copy h1 { font-size: clamp(3rem, 15vw, 4.6rem); }
   .hero-copy > p { font-size: .94rem; }

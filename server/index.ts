@@ -23,7 +23,7 @@ app.get("/api/jobs/:id", async (request, response, next) => {
 });
 app.post("/api/jobs", async (request, response) => {
   try {
-    response.status(201).json({ job: await createJob(request.body?.url) });
+    response.status(201).json({ job: await createJob(request.body?.url, request.body?.extractor) });
   } catch (error) {
     response.status(400).json({ error: error instanceof Error ? error.message : String(error) });
   }

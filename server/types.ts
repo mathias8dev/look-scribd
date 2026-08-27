@@ -1,10 +1,12 @@
 export type JobStatus = "queued" | "running" | "completed" | "failed" | "canceled";
 export type JobKind = "scribd" | "direct";
+export type ExtractorMode = "auto" | "fast" | "browser";
 
 export type DocumentJob = {
   id: string;
   url: string;
   kind: JobKind;
+  extractor: ExtractorMode;
   source: string;
   title: string;
   format: string;

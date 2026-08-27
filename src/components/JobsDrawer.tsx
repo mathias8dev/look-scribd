@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Activity, CheckCircle2, ChevronDown, Clock3, FileText, LoaderCircle, XCircle } from "lucide-react";
 import { useState } from "react";
-import type { DocumentJob, JobStatus } from "../types";
+import type { DocumentJob, ExtractorMode, JobStatus } from "../types";
 import { JobActions } from "./JobActions";
 
 const statusLabels: Record<JobStatus, string> = {
@@ -11,6 +11,8 @@ const statusLabels: Record<JobStatus, string> = {
   failed: "Échec",
   canceled: "Annulé",
 };
+
+const extractorLabels: Record<ExtractorMode, string> = { auto: "Auto", fast: "Rapide", browser: "Navigateur" };
 
 const statusIcons = {
   queued: Clock3,
@@ -32,7 +34,7 @@ type Props = {
   onClose: () => void;
   onCancel: (id: string) => void;
   onRemove: (id: string) => void;
-  onRetry: (url: string) => void;
+  onRetry: (url: string, extractor: ExtractorMode) => void;
 };
 
 export function JobsDrawer({ open, jobs, onClose, onCancel, onRemove, onRetry }: Props) {
@@ -76,7 +78,7 @@ export function JobsDrawer({ open, jobs, onClose, onCancel, onRemove, onRetry }:
                       <span className="drawer-job-icon"><Icon className={job.status === "running" ? "spin" : ""} size={17} /></span>
                       <span className="drawer-job-copy">
                         <span className="drawer-job-title">{job.title}</span>
-                        <span className="drawer-job-meta">{job.format} · {job.source} {formatSize(job.fileSize) ? `· ${formatSize(job.fileSize)}` : ""}</span>
+                        <span className="drawer-job-meta">{job.format} · {job.source} · {extractorLabels[job.extractor]} {formatSize(job.fileSize) ? `· ${formatSize(job.fileSize)}` : ""}</span>
                       </span>
                       <span className="drawer-job-state">{statusLabels[job.status]}</span>
                       <ChevronDown className={isOpen ? "rotated" : ""} size={15} />

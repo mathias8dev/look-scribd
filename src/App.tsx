@@ -22,7 +22,7 @@ import { cancelJob, fetchJobs, removeJob, submitJob } from "./api";
 import { ActiveJob } from "./components/ActiveJob";
 import { JobsDrawer } from "./components/JobsDrawer";
 import { Logo } from "./components/Logo";
-import type { DocumentJob } from "./types";
+import type { DocumentJob, ExtractorMode } from "./types";
 
 const faqs = [
   {
@@ -38,8 +38,8 @@ const faqs = [
     answer: "L’historique reste disponible. Les jobs encore en attente repartent dans la file et un traitement interrompu est clairement indiqué dans son journal.",
   },
   {
-    question: "Pourquoi un document Scribd peut-il demander une connexion ?",
-    answer: "Le worker Playwright utilise la session enregistrée avec npm run auth:scribd. Il peut capturer un téléchargement proposé par Scribd, mais ne modifie pas les droits du document.",
+    question: "Quel extracteur choisir ?",
+    answer: "Auto essaie d’abord l’extraction rapide des images, puis utilise le rendu Playwright si nécessaire. Rapide et Navigateur permettent de forcer une seule méthode.",
   },
 ];
 
@@ -47,6 +47,12 @@ const steps = [
   { number: "01", title: "Collez le lien", text: "Ajoutez l’adresse du document. Le format et la source sont validés côté serveur.", icon: Link2 },
   { number: "02", title: "Suivez le job", text: "Le worker traite la demande en arrière-plan et publie sa progression en temps réel.", icon: Activity },
   { number: "03", title: "Récupérez le fichier", text: "Téléchargez le fichier prêt, puis retrouvez-le à tout moment dans l’historique.", icon: ArrowDownToLine },
+];
+
+const extractorOptions: Array<{ value: ExtractorMode; label: string; detail: string }> = [
+  { value: "auto", label: "Auto", detail: "Rapide, puis navigateur" },
+  { value: "fast", label: "Rapide", detail: "Images directes" },
+  { value: "browser", label: "Navigateur", detail: "Rendu Playwright" },
 ];
 
 function FaqRow({ item, initiallyOpen }: { item: (typeof faqs)[number]; initiallyOpen: boolean }) {
@@ -71,6 +77,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [extractor, setExtractor] = useState<ExtractorMode>("auto");
 
   const refresh = useCallback(async (quiet = false) => {
     try {
@@ -101,7 +108,7 @@ export default function App() {
     setSubmitting(true);
     setError(null);
     try {
-      const job = await submitJob(value.trim());
+      const job = await submitJob(value.trim(), extractor);
       setJobs((current) => [job, ...current.filter((item) => item.id !== job.id)]);
       setSelectedId(job.id);
       setUrl("");
@@ -139,9 +146,10 @@ export default function App() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Suppression impossible."); }
   }
 
-  function handleRetry(retryUrl: string) {
+  function handleRetry(retryUrl: string, retryExtractor: ExtractorMode) {
     setDrawerOpen(false);
     setUrl(retryUrl);
+    setExtractor(retryExtractor);
     setError(null);
     document.querySelector("#outil")?.scrollIntoView({ behavior: "smooth" });
   }
@@ -178,7 +186,7 @@ export default function App() {
           <div className="tool-card">
             <div className="tool-heading">
               <div><p>Nouveau téléchargement</p><span>Scribd, PDF, DOCX, PPTX, TXT ou EPUB</span></div>
-              <div className="worker-state"><i /><span>Playwright prêt</span></div>
+              <div className="worker-state"><i /><span>Extracteurs prêts</span></div>
             </div>
             <form onSubmit={handleSubmit}>
               <div className={`input-shell ${error ? "input-error" : ""}`}>
@@ -190,6 +198,17 @@ export default function App() {
                   {submitting ? <><LoaderCircle className="spin" size={17} /> Ajout…</> : <>Lancer le job <ArrowRight size={17} /></>}
                 </button>
               </div>
+              <fieldset className="extractor-picker" disabled={submitting}>
+                <legend>Extracteur</legend>
+                <div>
+                  {extractorOptions.map((option) => (
+                    <button type="button" key={option.value} className={extractor === option.value ? "active" : ""} aria-pressed={extractor === option.value} onClick={() => setExtractor(option.value)}>
+                      <strong>{option.label}</strong>
+                      <span>{option.detail}</span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
               {error && <motion.p className="form-error" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}>{error}</motion.p>}
             </form>
 
@@ -204,7 +223,7 @@ export default function App() {
           </div>
         </motion.div>
 
-        <div className="trust-row"><span><Check size={13} /> Chromium headless</span><span><Check size={13} /> Session persistante</span><span><Check size={13} /> Compatible Docker</span></div>
+        <div className="trust-row"><span><Check size={13} /> Extraction directe</span><span><Check size={13} /> Repli Playwright</span><span><Check size={13} /> Compatible Docker</span></div>
       </section>
 
       <section id="fonctionnement" className="steps-section">

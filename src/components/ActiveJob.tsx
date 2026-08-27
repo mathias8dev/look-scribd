@@ -1,13 +1,15 @@
 import { motion } from "framer-motion";
 import { CheckCircle2, Clock3, FileText, LoaderCircle, XCircle } from "lucide-react";
-import type { DocumentJob } from "../types";
+import type { DocumentJob, ExtractorMode } from "../types";
 import { JobActions } from "./JobActions";
+
+const extractorLabels: Record<ExtractorMode, string> = { auto: "Auto", fast: "Rapide", browser: "Navigateur" };
 
 type Props = {
   job: DocumentJob;
   onCancel: (id: string) => void;
   onRemove: (id: string) => void;
-  onRetry: (url: string) => void;
+  onRetry: (url: string, extractor: ExtractorMode) => void;
 };
 
 export function ActiveJob({ job, onCancel, onRemove, onRetry }: Props) {
@@ -20,7 +22,7 @@ export function ActiveJob({ job, onCancel, onRemove, onRetry }: Props) {
         <div className="active-job-copy">
           <span className="active-job-status"><Icon className={job.status === "running" ? "spin" : ""} size={14} /> {job.currentStep}</span>
           <h3>{job.title}</h3>
-          <p>{job.source} · créé à {new Date(job.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>
+          <p>{job.source} · {extractorLabels[job.extractor]} · créé à {new Date(job.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>
         </div>
         <JobActions job={job} onCancel={onCancel} onRemove={onRemove} onRetry={onRetry} />
       </div>

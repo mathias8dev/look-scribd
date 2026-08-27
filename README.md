@@ -2,19 +2,22 @@
 
 Interface auto-hébergée pour gérer des téléchargements de documents sous forme de jobs asynchrones. L’application utilise React + Vite pour l’interface, Express pour l’API et SQLite pour conserver la progression et l’historique.
 
+![Interface de Look Scribd](docs/look-scribd-home.png)
+
 ## Fonctionnalités
 
 - file de jobs asynchrone avec concurrence configurable ;
 - progression, annulation, relance, journaux et historique persistant ;
 - téléchargement serveur des URL directes PDF, DOCX, PPTX, TXT et EPUB ;
-- export PDF Playwright des liens Scribd `document`, `doc` et `presentation` depuis leur aperçu intégré ;
+- choix `Auto`, `Rapide` ou `Navigateur` pour les liens Scribd ;
+- extraction directe et parallèle des images, avec repli automatique vers l’export PDF Playwright ;
 - protection contre les destinations réseau privées et limite de taille configurable ;
 - interface responsive animée avec Framer Motion ;
 - image Docker avec volumes séparés pour SQLite et les fichiers.
 
-Les liens Scribd sont convertis vers leur aperçu intégré puis ouverts par Chromium en arrière-plan. Le worker charge les pages par lots, imprime chaque page avec Chrome DevTools Protocol et fusionne le résultat dans un PDF. Aucune session Scribd n’est nécessaire ; utilisez uniquement cette fonction pour des documents que vous avez le droit de consulter et de conserver.
+En mode `Auto`, le worker cherche d’abord les URL d’images exposées dans la page Scribd, les télécharge en parallèle et les assemble dans l’ordre. Si ces ressources ne sont pas disponibles ou sont incomplètes, il convertit le lien vers l’aperçu intégré, charge les pages par lots dans Chromium, les imprime avec Chrome DevTools Protocol et fusionne le résultat. Aucune session Scribd n’est nécessaire ; utilisez uniquement cette fonction pour des documents que vous avez le droit de consulter et de conserver.
 
-L’architecture d’export est adaptée de l’approche publiée dans [themrsami/scribd-downloader](https://github.com/themrsami/scribd-downloader), tout en conservant Playwright et l’intégration TypeScript de l’application.
+L’extracteur rapide adapte en Node l’approche de [axrona/scribd-downloader](https://github.com/axrona/scribd-downloader). Le repli navigateur s’appuie sur l’approche de [themrsami/scribd-downloader](https://github.com/themrsami/scribd-downloader), tout en conservant Playwright et l’intégration TypeScript de l’application.
 
 ## Développement
 
@@ -50,6 +53,7 @@ Comme `local-youtube`, le compose utilise deux montages persistants :
 | --- | ---: | --- |
 | `LOOK_SCRIBD_MAX_CONCURRENT` | `2` | Nombre maximal de jobs traités en parallèle |
 | `LOOK_SCRIBD_MAX_FILE_MB` | `500` | Taille maximale d’un téléchargement direct ou d’un PDF exporté |
+| `LOOK_SCRIBD_FAST_CONCURRENCY` | `10` | Nombre d’images téléchargées en parallèle par l’extracteur rapide |
 | `LOOK_SCRIBD_BROWSER_TIMEOUT_MS` | `60000` | Délai maximal d’ouverture de l’aperçu |
 | `LOOK_SCRIBD_PAGE_LOAD_TIMEOUT_MS` | `120000` | Délai de chargement d’un lot de pages Scribd |
 | `LOOK_SCRIBD_RENDER_SETTLE_TIMEOUT_MS` | `30000` | Délai maximal de stabilisation du rendu d’une page |

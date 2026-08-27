@@ -1,4 +1,4 @@
-import type { DocumentJob } from "./types";
+import type { DocumentJob, ExtractorMode } from "./types";
 
 async function request<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   const response = await fetch(input, init);
@@ -11,11 +11,11 @@ export async function fetchJobs(): Promise<DocumentJob[]> {
   return (await request<{ jobs: DocumentJob[] }>("/api/jobs")).jobs;
 }
 
-export async function submitJob(url: string): Promise<DocumentJob> {
+export async function submitJob(url: string, extractor: ExtractorMode = "auto"): Promise<DocumentJob> {
   return (await request<{ job: DocumentJob }>("/api/jobs", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ url, extractor }),
   })).job;
 }
 
