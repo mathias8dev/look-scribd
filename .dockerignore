@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env*
+node_modules
+.next
+dist
+server-dist
+data
+downloads
+look-scribd-desktop.png
+look-scribd-mobile.png
+npm-debug.log*
+README.md

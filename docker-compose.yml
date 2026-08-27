@@ -1,0 +1,24 @@
+services:
+  look-scribd:
+    build:
+      context: .
+    image: look-scribd:latest
+    container_name: look-scribd
+    ports:
+      - "${LOOK_SCRIBD_PORT:-7342}:3000"
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-Europe/Paris}
+      LOOK_SCRIBD_DATA_DIR: /app/data
+      LOOK_SCRIBD_DOWNLOAD_DIR: /app/downloads
+      LOOK_SCRIBD_MAX_CONCURRENT: ${LOOK_SCRIBD_MAX_CONCURRENT:-2}
+      LOOK_SCRIBD_MAX_FILE_MB: ${LOOK_SCRIBD_MAX_FILE_MB:-500}
+      LOOK_SCRIBD_BROWSER_TIMEOUT_MS: ${LOOK_SCRIBD_BROWSER_TIMEOUT_MS:-60000}
+      LOOK_SCRIBD_PAGE_LOAD_TIMEOUT_MS: ${LOOK_SCRIBD_PAGE_LOAD_TIMEOUT_MS:-120000}
+      LOOK_SCRIBD_RENDER_SETTLE_TIMEOUT_MS: ${LOOK_SCRIBD_RENDER_SETTLE_TIMEOUT_MS:-30000}
+      LOOK_SCRIBD_EXPORT_BATCH_SIZE: ${LOOK_SCRIBD_EXPORT_BATCH_SIZE:-8}
+    volumes:
+      - ~/.look-scribd/data:/app/data
+      - ~/Downloads/look-scribd:/app/downloads
+    shm_size: 1gb
+    restart: unless-stopped
